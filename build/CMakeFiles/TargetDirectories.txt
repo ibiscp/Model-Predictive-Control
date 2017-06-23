@@ -1,0 +1,3 @@
+/media/Ibis/User/Documents/GitHub/Model-Predictive-Control/build/CMakeFiles/edit_cache.dir
+/media/Ibis/User/Documents/GitHub/Model-Predictive-Control/build/CMakeFiles/rebuild_cache.dir
+/media/Ibis/User/Documents/GitHub/Model-Predictive-Control/build/CMakeFiles/mpc.dir
