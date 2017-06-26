@@ -5,29 +5,25 @@
 
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
+// Set the timestep length and duration
 size_t N = 25;
 double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
-//
 // It was obtained by measuring the radius formed by running the vehicle in the
 // simulator around in a circle with a constant steering angle and velocity on a
 // flat terrain.
-//
 // Lf was tuned until the the radius formed by the simulating the model
 // presented in the classroom matched the previous radius.
-//
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
-// NOTE: feel free to play around with this
-// or do something completely different
+// NOTE: feel free to play around with this or do something completely different
 double ref_v = 40;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
-// when one variable starts and another ends to make our lifes easier.
+// when one variable starts and another ends to make our life easier.
 size_t x_start = 0;
 size_t y_start = x_start + N;
 size_t psi_start = y_start + N;
@@ -37,26 +33,23 @@ size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
 
-class FG_eval
-{
+// Set number of actuators, states and errors
+double n_actuators = 2;
+double n_states = 4;
+double n_errors = 2;
+
+class FG_eval {
 public:
     // Fitted polynomial coefficients
     Eigen::VectorXd coeffs;
-    FG_eval(Eigen::VectorXd coeffs)
-    {
+    FG_eval(Eigen::VectorXd coeffs) {
         this->coeffs = coeffs;
     }
 
     typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
-    void operator()(ADvector& fg, const ADvector& vars)
-    {
-        // TODO: implement MPC
-        // `fg` a vector of the cost constraints, `vars` is a vector of variable values (state & actuators)
-        // NOTE: You'll probably go back and forth between this function and
-        // the Solver function below.
+    void operator()(ADvector& fg, const ADvector& vars) {
 
         // The cost is stored is the first element of `fg`.
-        // Any additions to the cost should be added to `fg[0]`.
         fg[0] = 0;
 
         // Reference State Cost
@@ -64,23 +57,20 @@ public:
         // any anything you think may be beneficial.
 
         // The part of the cost based on the reference state.
-        for (int t = 0; t < N; t++)
-        {
+        for (int t = 0; t < N; t++) {
             fg[0] += CppAD::pow(vars[cte_start + t], 2);
             fg[0] += CppAD::pow(vars[epsi_start + t], 2);
             fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
         }
 
         // Minimize the use of actuators.
-        for (int t = 0; t < N - 1; t++)
-        {
+        for (int t = 0; t < N - 1; t++) {
             fg[0] += CppAD::pow(vars[delta_start + t], 2);
             fg[0] += CppAD::pow(vars[a_start + t], 2);
         }
 
         // Minimize the value gap between sequential actuations.
-        for (int t = 0; t < N - 2; t++)
-        {
+        for (int t = 0; t < N - 2; t++) {
             fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
             fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
         }
@@ -92,19 +82,17 @@ public:
 
         // Initial constraints
         //
-        // We add 1 to each of the starting indices due to cost being located at
-        // index 0 of `fg`.
+        // We add 1 to each of the starting indices due to cost being located at index 0 of `fg`.
         // This bumps up the position of all the other values.
-        fg[1 + x_start] = vars[x_start];
-        fg[1 + y_start] = vars[y_start];
-        fg[1 + psi_start] = vars[psi_start];
-        fg[1 + v_start] = vars[v_start];
-        fg[1 + cte_start] = vars[cte_start];
+        fg[1 + x_start]    = vars[x_start];
+        fg[1 + y_start]    = vars[y_start];
+        fg[1 + psi_start]  = vars[psi_start];
+        fg[1 + v_start]    = vars[v_start];
+        fg[1 + cte_start]  = vars[cte_start];
         fg[1 + epsi_start] = vars[epsi_start];
 
         // The rest of the constraints
-        for (int t = 1; t < N; t++)
-        {
+        for (int t = 1; t < N; t++) {
             // The state at time t+1 .
             AD<double> x1 = vars[x_start + t];
             AD<double> y1 = vars[y_start + t];
@@ -154,8 +142,7 @@ public:
 MPC::MPC() {}
 MPC::~MPC() {}
 
-vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
-{
+vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     bool ok = true;
     size_t i;
     typedef CPPAD_TESTVECTOR(double) Dvector;
@@ -165,17 +152,32 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
     // element vector and there are 10 timesteps. The number of variables is:
     //
     // 4 * 10 + 2 * 9
-    size_t n_vars = 4 * N + 2 * (N-1);
+    size_t n_vars = (n_states + n_errors) * N + n_actuators * (N-1);
     // TODO: Set the number of constraints
-    size_t n_constraints = 0;
+    size_t n_constraints = (n_states + n_errors) * N;
 
     // Initial value of the independent variables.
     // SHOULD BE 0 besides initial state.
     Dvector vars(n_vars);
-    for (int i = 0; i < n_vars; i++)
-    {
+    for (int i = 0; i < n_vars; i++) {
         vars[i] = 0;
     }
+
+    // Get state variables.
+    double x = state[0];
+    double y = state[1];
+    double psi = state[2];
+    double v = state[3];
+    double cte = state[4];
+    double epsi = state[5];
+
+    // Set initial values
+    vars[x_start] = x;
+    vars[y_start] = y;
+    vars[psi_start] = psi;
+    vars[v_start] = v;
+    vars[cte_start] = cte;
+    vars[epsi_start] = epsi;
 
     Dvector vars_lowerbound(n_vars);
     Dvector vars_upperbound(n_vars);
@@ -185,8 +187,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
     // Should be 0 besides initial state.
     Dvector constraints_lowerbound(n_constraints);
     Dvector constraints_upperbound(n_constraints);
-    for (int i = 0; i < n_constraints; i++)
-    {
+    for (int i = 0; i < n_constraints; i++) {
         constraints_lowerbound[i] = 0;
         constraints_upperbound[i] = 0;
     }
