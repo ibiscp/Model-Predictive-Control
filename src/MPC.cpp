@@ -52,9 +52,7 @@ public:
         // The cost is stored is the first element of `fg`.
         fg[0] = 0;
 
-        // Reference State Cost
-        // TODO: Define the cost related the reference state and
-        // any anything you think may be beneficial.
+        /// Reference State Cost
 
         // The part of the cost based on the reference state.
         for (int t = 0; t < N; t++) {
@@ -128,10 +126,8 @@ public:
             fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
             fg[1 + psi_start + t] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
             fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
-            fg[1 + cte_start + t] =
-                cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
-            fg[1 + epsi_start + t] =
-                epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
+            fg[1 + cte_start + t] = cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+            fg[1 + epsi_start + t] = epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
         }
     }
 };
@@ -147,21 +143,18 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     size_t i;
     typedef CPPAD_TESTVECTOR(double) Dvector;
 
-    // TODO: Set the number of model variables (includes both states and inputs).
+    // Set the number of model variables (includes both states and inputs).
     // For example: If the state is a 4 element vector, the actuators is a 2
     // element vector and there are 10 timesteps. The number of variables is:
-    //
     // 4 * 10 + 2 * 9
     size_t n_vars = (n_states + n_errors) * N + n_actuators * (N-1);
-    // TODO: Set the number of constraints
+    // Set the number of constraints
     size_t n_constraints = (n_states + n_errors) * N;
 
-    // Initial value of the independent variables.
-    // SHOULD BE 0 besides initial state.
+    // Initial value of the independent variables should be 0 besides initial state.
     Dvector vars(n_vars);
-    for (int i = 0; i < n_vars; i++) {
+    for (int i = 0; i < n_vars; i++)
         vars[i] = 0;
-    }
 
     // Get state variables.
     double x = state[0];
@@ -179,9 +172,27 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     vars[cte_start] = cte;
     vars[epsi_start] = epsi;
 
+    // Set lower and upper limits for variables.
     Dvector vars_lowerbound(n_vars);
     Dvector vars_upperbound(n_vars);
-    // TODO: Set lower and upper limits for variables.
+
+    // Non-actuators upper and lower limits [-inf, inf]
+    for (i = 0; i < delta_start; i++) {
+        vars_lowerbound[i] = -1.0e19;
+        vars_upperbound[i] = 1.0e19;
+    }
+
+    // Delta upper and lower limits [-25, 25] degrees (values in radians).
+    for (i = delta_start; i < a_start; i++) {
+        vars_lowerbound[i] = -0.436332;
+        vars_upperbound[i] = 0.436332;
+    }
+
+    // Acceleration/deceleration upper and lower limits [-1, 1]
+    for (i=a_start; i< n_vars; i++) {
+        vars_lowerbound[i] = -1.0;
+        vars_upperbound[i] = 1.0;
+    }
 
     // Lower and upper limits for the constraints
     // Should be 0 besides initial state.
@@ -191,6 +202,20 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         constraints_lowerbound[i] = 0;
         constraints_upperbound[i] = 0;
     }
+
+    constraints_lowerbound[x_start] = x;
+    constraints_lowerbound[y_start] = y;
+    constraints_lowerbound[psi_start] = psi;
+    constraints_lowerbound[v_start] = v;
+    constraints_lowerbound[cte_start] = cte;
+    constraints_lowerbound[epsi_start] = epsi;
+
+    constraints_upperbound[x_start] = x;
+    constraints_upperbound[y_start] = y;
+    constraints_upperbound[psi_start] = psi;
+    constraints_upperbound[v_start] = v;
+    constraints_upperbound[cte_start] = cte;
+    constraints_upperbound[epsi_start] = epsi;
 
     // object that computes objective and constraints
     FG_eval fg_eval(coeffs);
@@ -228,10 +253,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     auto cost = solution.obj_value;
     std::cout << "Cost " << cost << std::endl;
 
-    // TODO: Return the first actuator values. The variables can be accessed with
-    // `solution.x[i]`.
-    //
+    // Return the first actuator values.
     // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
     // creates a 2 element double vector.
-    return {};
+    return {solution.x[delta_start], solution.x[a_start]};
 }
