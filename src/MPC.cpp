@@ -18,7 +18,7 @@ double dt = 0.05;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
-// NOTE: feel free to play around with this or do something completely different
+// Speed reference
 double ref_v = 40;
 
 // The solver takes all the state variables and actuator
@@ -48,27 +48,27 @@ public:
 
     typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
     void operator()(ADvector& fg, const ADvector& vars) {
+        size_t t;
 
         // The cost is stored is the first element of `fg`.
         fg[0] = 0;
 
         /// Reference State Cost
-
         // The part of the cost based on the reference state.
-        for (int t = 0; t < N; t++) {
+        for (t = 0; t < N; t++) {
             fg[0] += CppAD::pow(vars[cte_start + t], 2);
             fg[0] += CppAD::pow(vars[epsi_start + t], 2);
             fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
         }
 
         // Minimize the use of actuators.
-        for (int t = 0; t < N - 1; t++) {
+        for (t = 0; t < N - 1; t++) {
             fg[0] += CppAD::pow(vars[delta_start + t], 2);
             fg[0] += CppAD::pow(vars[a_start + t], 2);
         }
 
         // Minimize the value gap between sequential actuations.
-        for (int t = 0; t < N - 2; t++) {
+        for (t = 0; t < N - 2; t++) {
             fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
             fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
         }
@@ -81,7 +81,6 @@ public:
         // Initial constraints
         //
         // We add 1 to each of the starting indices due to cost being located at index 0 of `fg`.
-        // This bumps up the position of all the other values.
         fg[1 + x_start]    = vars[x_start];
         fg[1 + y_start]    = vars[y_start];
         fg[1 + psi_start]  = vars[psi_start];
@@ -90,8 +89,8 @@ public:
         fg[1 + epsi_start] = vars[epsi_start];
 
         // The rest of the constraints
-        for (int t = 1; t < N; t++) {
-            // The state at time t+1 .
+        for (t = 1; t < N; t++) {
+            // The state at time t+1
             AD<double> x1 = vars[x_start + t];
             AD<double> y1 = vars[y_start + t];
             AD<double> psi1 = vars[psi_start + t];
@@ -99,7 +98,7 @@ public:
             AD<double> cte1 = vars[cte_start + t];
             AD<double> epsi1 = vars[epsi_start + t];
 
-            // The state at time t.
+            // The state at time t
             AD<double> x0 = vars[x_start + t - 1];
             AD<double> y0 = vars[y_start + t - 1];
             AD<double> psi0 = vars[psi_start + t - 1];
@@ -121,7 +120,7 @@ public:
             // This is also CppAD can compute derivatives and pass
             // these to the solver.
 
-            // TODO: Setup the rest of the model constraints
+            // Setup the rest of the model constraints
             fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
             fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
             fg[1 + psi_start + t] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
@@ -153,7 +152,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
     // Initial value of the independent variables should be 0 besides initial state.
     Dvector vars(n_vars);
-    for (int i = 0; i < n_vars; i++)
+    for (i = 0; i < n_vars; i++)
         vars[i] = 0;
 
     // Get state variables.
@@ -198,7 +197,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // Should be 0 besides initial state.
     Dvector constraints_lowerbound(n_constraints);
     Dvector constraints_upperbound(n_constraints);
-    for (int i = 0; i < n_constraints; i++) {
+    for (i = 0; i < n_constraints; i++) {
         constraints_lowerbound[i] = 0;
         constraints_upperbound[i] = 0;
     }
@@ -252,6 +251,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // Cost
     auto cost = solution.obj_value;
     std::cout << "Cost " << cost << std::endl;
+
+    /*mpc_x_vals.resize(N);
+    mpc_y_vals.resize(N);
+
+    for (int i = 0; i < N; i++) {
+        mpc_x_vals[i] = solution.x[x_start + i];
+        mpc_y_vals[i] = solution.x[y_start + i];
+    }*/
 
     // Return the first actuator values.
     // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
