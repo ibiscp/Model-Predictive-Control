@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // Set the timestep length and duration
-size_t N = 25;
-double dt = 0.05;
+size_t N = 10;
+double dt = 0.10;
 
 // This value assumes the model presented in the classroom is used.
 // It was obtained by measuring the radius formed by running the vehicle in the
@@ -19,7 +19,7 @@ double dt = 0.05;
 const double Lf = 2.67;
 
 // Speed reference
-double ref_v = 40;
+double ref_v = 50;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -33,10 +33,9 @@ size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
 
-// Set number of actuators, states and errors
+// Set number of actuators, states
 double n_actuators = 2;
-double n_states = 4;
-double n_errors = 2;
+double n_states = 6;
 
 class FG_eval {
 public:
@@ -56,7 +55,7 @@ public:
         /// Reference State Cost
         // The part of the cost based on the reference state.
         for (t = 0; t < N; t++) {
-            fg[0] += CppAD::pow(vars[cte_start + t], 2);
+            fg[0] += 4000 * CppAD::pow(vars[cte_start + t], 2);
             fg[0] += CppAD::pow(vars[epsi_start + t], 2);
             fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
         }
@@ -110,8 +109,8 @@ public:
             AD<double> delta0 = vars[delta_start + t - 1];
             AD<double> a0 = vars[a_start + t - 1];
 
-            AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-            AD<double> psides0 = CppAD::atan(coeffs[1]);
+            AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2]*x0*x0 + coeffs[3]*x0*x0*x0;
+            AD<double> psides0 = CppAD::atan(coeffs[1] + 2*coeffs[2]*x0 + 3*coeffs[3]*x0*x0);
 
             // Here's `x` to get you started.
             // The idea here is to constraint this value to be 0.
@@ -146,9 +145,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // For example: If the state is a 4 element vector, the actuators is a 2
     // element vector and there are 10 timesteps. The number of variables is:
     // 4 * 10 + 2 * 9
-    size_t n_vars = (n_states + n_errors) * N + n_actuators * (N-1);
+    size_t n_vars = n_states * N + n_actuators * (N - 1);
     // Set the number of constraints
-    size_t n_constraints = (n_states + n_errors) * N;
+    size_t n_constraints = n_states * N;
 
     // Initial value of the independent variables should be 0 besides initial state.
     Dvector vars(n_vars);
@@ -252,16 +251,21 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     auto cost = solution.obj_value;
     std::cout << "Cost " << cost << std::endl;
 
-    /*mpc_x_vals.resize(N);
-    mpc_y_vals.resize(N);
+    // Define delta and a
+    double delta = (solution.x[delta_start] + solution.x[delta_start + 1]) / 2.0;
+    double a = (solution.x[a_start] + solution.x[a_start + 1]) / 2.0;
 
-    for (int i = 0; i < N; i++) {
-        mpc_x_vals[i] = solution.x[x_start + i];
-        mpc_y_vals[i] = solution.x[y_start + i];
-    }*/
+    // Create result vector
+    vector<double> result = {delta, a};
+
+    // Attach predicted route
+    for (i = 0; i < N; i++){
+        result.push_back(solution.x[x_start + i]);
+        result.push_back(solution.x[y_start + i]);
+    }
 
     // Return the first actuator values.
     // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
     // creates a 2 element double vector.
-    return {solution.x[delta_start], solution.x[a_start]};
+    return result;
 }
