@@ -115,9 +115,6 @@ int main() {
 
                         pts_x_car[i] = x_diff * cos(psi) + y_diff * sin(psi);
                         pts_y_car[i] = y_diff * cos(psi) - x_diff * sin(psi);
-
-                        next_x_vals.push_back(pts_x_car[i]);
-                        next_y_vals.push_back(pts_y_car[i]);
                     }
 
                     // Use polynomial do fit the points
@@ -164,6 +161,10 @@ int main() {
                     //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
                     // the points in the simulator are connected by a Yellow line
 
+                    for (double i = 0; i < 100; i += 3) {
+                        next_x_vals.push_back(i);
+                        next_y_vals.push_back(polyeval(coeffs, i));
+                    }
                     msgJson["next_x"] = next_x_vals;
                     msgJson["next_y"] = next_y_vals;
 

@@ -3,6 +3,49 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## Project discussion
+
+### The Model
+
+The state of the vehicle is given by the following equations:
+
+<p align="center"><img src="states.png"/></p>
+
+With the following description:
+
+* X position
+* Y position
+* Orientation angle psi (depends on the steering angle)
+* Velocity (depends on the acceleration)
+* Cross-track error
+* Psi error (depends on the steering angle)
+
+For the actuators, two outputs are used, steering angle and acceleration, both used in the formulas above.
+
+### Timestep Length and Elapsed Duration (N & dt)
+
+For this project, the value chosen for N is 10 and dt is 0.1, which were suggested by Udacity. Changing these values made the car go out of the track, in order to avoid it, it would be necessary to recalibrate the error parameters.
+
+### Polynomial Fitting and MPC Preprocessing
+
+The waypoints are transformed to the vehicle coordinate using the following formula:
+
+```cpp
+for (size_t i = 0; i < ptsx.size(); i++) {
+    x_diff = ptsx[i] - px;
+    y_diff = ptsy[i] - py;
+
+    pts_x_car[i] = x_diff * cos(psi) + y_diff * sin(psi);
+    pts_y_car[i] = y_diff * cos(psi) - x_diff * sin(psi);
+}
+```
+
+### Model Predictive Control with Latency
+
+We know that the actuators does not execute instantly in a real car, it takes some time to the message propagate and the actuator execute the command. So, it is necessary to simulate this latency to make the model more realistic. In order to make it in this project, the latency was set to 100 miliseconds.
+
+Other values were not tested, because this was not the crucial part of this project, it was only necessary to have some latency in the system.
+
 ## Dependencies
 
 * cmake >= 3.5
@@ -45,10 +88,7 @@ Self-Driving Car Engineer Nanodegree Program
 ## Basic Build Instructions
 
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./mpc`.
+1. Run it: `./run.sh`.
 
 ## Tips
 
