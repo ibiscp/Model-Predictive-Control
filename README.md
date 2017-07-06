@@ -9,7 +9,7 @@ Self-Driving Car Engineer Nanodegree Program
 
 The state of the vehicle is given by the following equations:
 
-<p align="center"><img src="states.png"/></p>
+<p align="center"><img src="images/states.png"/></p>
 
 With the following description:
 
@@ -44,7 +44,17 @@ for (size_t i = 0; i < ptsx.size(); i++) {
 
 We know that the actuators does not execute instantly in a real car, it takes some time to the message propagate and the actuator execute the command. So, it is necessary to simulate this latency to make the model more realistic. In order to make it in this project, the latency was set to 100 miliseconds.
 
-Other values were not tested, because this was not the crucial part of this project, it was only necessary to have some latency in the system.
+knowing the latency value (which can be measured), it is necessary to use this value to update the state vector before calling the solve function.
+
+```cpp
+px = px + v * cos(psi) * dt;
+py = py + v * sin(psi) * dt;
+psi = psi + v * steer_value / Lf * dt;
+v = v + throttle_value * dt;
+ptsx[0] = px; // adjust so [0]  will now be zero in transform
+ptsy[0] = py; // adjust so [0]  will now be zero in transform
+double epsi = psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] *pow(px,2));
+```
 
 ## Dependencies
 
