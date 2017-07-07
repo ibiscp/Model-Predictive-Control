@@ -252,8 +252,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     std::cout << "Cost " << cost << std::endl;
 
     // Define delta and a
-    double delta = (solution.x[delta_start] + solution.x[delta_start + 1]) / 2.0;
-    double a = (solution.x[a_start] + solution.x[a_start + 1]) / 2.0;
+    double delta = solution.x[delta_start] * 0.5 + solution.x[delta_start + 1] * 0.5;
+    double a = solution.x[a_start] * 0.5 + solution.x[a_start + 1] * 0.5;
 
     // Create result vector
     vector<double> result = {delta, a};

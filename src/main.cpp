@@ -102,13 +102,11 @@ int main() {
                     double throttle_value = j[1]["throttle"];
                     double dt = 0.1;
 
-                    // add in latency
+                    //Add in latency
                     px = px   + v * cos(psi) * dt;
                     py = py   + v * sin(psi) * dt;
                     psi = psi + v *steer_value/Lf*dt;
                     v =    v  + throttle_value * dt;
-                    ptsx[0] = px; // adjust so [0]  will now be zero in transform
-                    ptsy[0] = py; // adjust so [0]  will now be zero in transform
 
                     //Display the waypoints/reference line
                     vector<double> next_x_vals;
@@ -138,8 +136,8 @@ int main() {
                     double cte = polyeval(coeffs, 0.0);
 
                     // Calculate the orientation error
-                    //double epsi = - atan(coeffs[1]);
-                    double epsi = psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] *pow(px,2));
+                    double epsi = - atan(coeffs[1]);
+                    //double epsi = psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] *pow(px,2));
 
                     // Create state vector
                     Eigen::VectorXd state(6);
